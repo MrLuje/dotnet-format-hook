@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <GitCmd>git</GitCmd>
+    <IsCI Condition="'$(CI)' != ''">false</IsCI>
+  </PropertyGroup>
+  
+  <Target Name="_GitRoot" Condition="!$(IsCi)">
+    <Exec Command='$(GitCmd) rev-parse --show-toplevel'
+			  ConsoleToMSBuild='true'
+			  ContinueOnError='true'>
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(MSBuildLastExitCode)' == '0'">
+      <GitRoot>$(NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="EmitGitHooksCreateVariables" BeforeTargets="Compile" Condition="!$(IsCi)">
+    
+    <!-- Create variable to file .git\format-hook.enabled -->
+    <PropertyGroup>
+      <GitRoot>$(NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
+    </PropertyGroup>
+    <CombinePath BasePath="$(GitRoot).git" Paths="format-hook.enabled">
+      <Output TaskParameter="CombinedPaths" PropertyName="GitHookStatusFile" />
+    </CombinePath>
+    <CombinePath BasePath="$(GitRoot)" Paths="$(HooksPath)">
+      <Output TaskParameter="CombinedPaths" PropertyName="HooksFolder" />
+    </CombinePath>
+    <CombinePath BasePath="$(HooksFolder)" Paths="pre-commit">
+      <Output TaskParameter="CombinedPaths" PropertyName="PrecommitFile" />
+    </CombinePath>
+    <CombinePath BasePath="$(GitRoot).config" Paths="dotnet-tools.json">
+      <Output TaskParameter="CombinedPaths" PropertyName="ToolManifestPath" />
+    </CombinePath>
+    <PropertyGroup>
+      <IsFirstBuildAfterInstall>$(!Exists($(GitHookStatusFile)))</IsFirstBuildAfterInstall>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="InstallDotnetFormat" AfterTargets="EmitGitHooksCreateVariables" Condition="$(IsFirstBuildAfterInstall) AND !$(IsCi)">
+    <Exec Command="dotnet format --dry-run -v q" ConsoleToMsBuild="true" ContinueOnError="true" />
+    <Exec Command="dotnet new tool-manifest" ConsoleToMsBuild="true" Condition="'$(MSBuildLastTaskResult)' == 'False'" />
+    <Exec Command="dotnet tool install dotnet-format" ConsoleToMsBuild="true" />
+  </Target>
+
+  <!-- 
+      During the first build, git command is executed.
+      During the second build, this won't be executed because the .git\format-hook.enabled file will be existing
+    -->
+  <Target Name="EmitCustomMessage" AfterTargets="EmitGitHooksCreateVariables" Condition="!Exists($(GitHookStatusFile)) AND !$(IsCi)">
+    <Exec Command="git config core.hooksPath $(HooksPath)" ConsoleToMsBuild="true"/>
+
+    <MakeDir Directories="$(HooksFolder)" Condition="!Exists($(HooksFolder))" />
+    <WriteLinesToFile
+        File="$(PrecommitFile)"
+        Lines="$(PreCommitContent)"
+        Condition="!Exists($(PrecommitFile))" />
+    
+    <!-- Create the file if it doesn't exists -->
+    <WriteLinesToFile
+        File="$(GitHookStatusFile)"
+        Condition="!Exists($(GitHookStatusFile))" />
+  </Target>
+
+</Project>

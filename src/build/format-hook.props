@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <HooksPath>hooks</HooksPath>
+    <PreCommitContent>
+      <![CDATA[#!/bin/sh
+
+echo "running precommit hook"
+LC_ALL=C
+# Select files to format
+
+GITFILES=%24(git diff --cached --name-only --diff-filter=ACM "*.cs") 
+DOTNETFORMATFILES=%24(git diff --cached --name-only --diff-filter=ACM "*.cs") # remove root src dir from git file path when passing to dotnet format
+
+[ -z "$DOTNETFORMATFILES" ] && exit 0
+
+# Format all selected files
+dotnet-format --check -v q --include $DOTNETFORMATFILES || 
+{
+	# Add back the modified files to staging
+	echo "$GITFILES" | xargs git add
+	cat <<\EOF
+Error: Code has been reformatted and changes were staged
+EOF
+	exit 1
+}]]>
+    </PreCommitContent>
+  </PropertyGroup>
+</Project>

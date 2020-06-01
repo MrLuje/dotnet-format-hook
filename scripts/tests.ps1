@@ -1,18 +1,30 @@
-$pkgs = Get-ChildItem "..\src\format-hook" -Filter "*.nupkg" -Recurse
-if ($pkgs.Length -eq 0) {
-    dotnet pack "..\src\format-hook"
-    $pkgs = Get-ChildItem "..\src\format-hook" -Filter "*.nupkg" -Recurse
-
-    if ($pkgs.Length -eq 0) {
-        Write-Error "Can't find nupkg file under 'src\format-hook'"
+if ((Test-Path "..\out")) {
+    Remove-Item -Path "..\out" -Force -Recurse
+    if($? -eq $false) {
+        Write-Error "Can't clear ./out folder"
+        Return
     }
-
 }
+
+New-Item "..\out" -ItemType Directory > $null
+Remove-Item -Path "$env:USERPROFILE\.nuget\packages\format-hook" -Recurse -ErrorAction SilentlyContinue
+
+dotnet pack "..\src\format-hook" -o "..\out"
+$pkgs = Get-ChildItem "..\out" -Filter "*.nupkg" -Recurse
+
+if ($pkgs.Length -eq 0) {
+    Write-Error "Can't find nupkg file under 'out\'"
+    Return
+}
+
 $pkg = $pkgs[0].Name
 $pkgFolder = $pkgs[0].Directory.FullName
 $currentPath = Get-Location
+Write-Host "Using package $pkg"
 
-Get-ChildItem "..\tests" |
+Copy-Item -Path "..\tests" -Destination "..\out" -Recurse
+
+Get-ChildItem "..\out\tests" |
 ForEach-Object {
     $testName = $_.Name
     $testFullpath = $_.FullName
@@ -20,14 +32,15 @@ ForEach-Object {
     Set-Location -Path $testFullpath
 
     Write-Host "** Testing '$testName' " -NoNewline
-    $success = Invoke-Command { & "$testFullpath\test.ps1" -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName }
+    $success = Invoke-Command { & (Join-Path -Path $testFullpath -ChildPath "test.ps1") -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName }
     Set-Location -Path $currentPath
-    git restore --source=HEAD --staged --worktree -- "$testFullpath\$testName"
 
-    if($success -eq $true) {
-        Write-Host -ForegroundColor "GREEN" " OK"
-    }
-    else {
-        Write-Error "Test '$testName' failed"
+    switch ($success) {
+        {$_ -eq $true} { Write-Host -ForegroundColor "GREEN" " OK"; break }
+        {$_ -eq $false} { Write-Error "Test '$testName' failed"; break }
+        Default { 
+            Write-Error "Test '$testName' failed"
+            Write-Host $success
+        }
     }
 }

@@ -2,26 +2,25 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <GitCmd>git</GitCmd>
-    <IsCI Condition="'$(CI)' != ''">false</IsCI>
+    <IsCi Condition="'$(CI)' == ''">false</IsCi>
   </PropertyGroup>
-  
+
   <Target Name="_GitRoot" Condition="!$(IsCi)">
-    <Exec Command='$(GitCmd) rev-parse --show-toplevel'
-			  ConsoleToMSBuild='true'
-			  ContinueOnError='true'>
+    <Exec Command='$(GitCmd) rev-parse --show-toplevel' ConsoleToMSBuild='true' ContinueOnError='true'>
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitOutput" />
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
+    <Exec Command="echo value is gitroot $(_GitOutput)" ConsoleToMSBuild='true' />
     <PropertyGroup Condition="'$(MSBuildLastExitCode)' == '0'">
-      <GitRoot>$(NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
+      <GitRoot>$([MsBuild]::NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
     </PropertyGroup>
+    <Error Condition="'$(MSBuildLastExitCode)' != '0'" Text="Git is not installed ?" />
   </Target>
 
-  <Target Name="EmitGitHooksCreateVariables" BeforeTargets="Compile" Condition="!$(IsCi)">
-    
+  <Target Name="EmitGitHooksCreateVariables" DependsOnTargets="_GitRoot" BeforeTargets="Compile" Condition="!($(IsCi))">
     <!-- Create variable to file .git\format-hook.enabled -->
     <PropertyGroup>
-      <GitRoot>$(NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
+      <GitRoot>$([MsBuild]::NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
     </PropertyGroup>
     <CombinePath BasePath="$(GitRoot).git" Paths="format-hook.enabled">
       <Output TaskParameter="CombinedPaths" PropertyName="GitHookStatusFile" />
@@ -35,34 +34,52 @@
     <CombinePath BasePath="$(GitRoot).config" Paths="dotnet-tools.json">
       <Output TaskParameter="CombinedPaths" PropertyName="ToolManifestPath" />
     </CombinePath>
+  </Target>
+
+  <Target Name="SetupHooks" AfterTargets="EmitGitHooksCreateVariables" Condition="!Exists($(GitHookStatusFile)) And !($(IsCi))">
+    <Exec Command="dotnet format --dry-run -v q"
+          WorkingDirectory="$(GitRoot)"
+          ConsoleToMsBuild="true"
+          StandardErrorImportance="Low"
+          ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
+    </Exec>
+
     <PropertyGroup>
-      <IsFirstBuildAfterInstall>$(!Exists($(GitHookStatusFile)))</IsFirstBuildAfterInstall>
+      <DotnetFormatInstalled Condition="'$(MSBuildLastExitCode)' == '0'">true</DotnetFormatInstalled>
+      <DotnetFormatInstalled Condition="'$(MSBuildLastExitCode)' != '0'">false</DotnetFormatInstalled>
     </PropertyGroup>
-  </Target>
 
-  <Target Name="InstallDotnetFormat" AfterTargets="EmitGitHooksCreateVariables" Condition="$(IsFirstBuildAfterInstall) AND !$(IsCi)">
-    <Exec Command="dotnet format --dry-run -v q" ConsoleToMsBuild="true" ContinueOnError="true" />
-    <Exec Command="dotnet new tool-manifest" ConsoleToMsBuild="true" Condition="'$(MSBuildLastTaskResult)' == 'False'" />
-    <Exec Command="dotnet tool install dotnet-format" ConsoleToMsBuild="true" />
-  </Target>
+    <Exec Command="dotnet new tool-manifest"
+          WorkingDirectory="$(GitRoot)"
+          ConsoleToMsBuild="true"
+          Condition="!$(DotnetFormatInstalled)">
+      <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
+    </Exec>
+    <Exec Command="dotnet tool install dotnet-format" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'"  />
+    <Error Condition="'$(MSBuildLastExitCode)' != '0'" Text="dotnet-format is not installed and can't be installed" />
 
-  <!-- 
-      During the first build, git command is executed.
-      During the second build, this won't be executed because the .git\format-hook.enabled file will be existing
-    -->
-  <Target Name="EmitCustomMessage" AfterTargets="EmitGitHooksCreateVariables" Condition="!Exists($(GitHookStatusFile)) AND !$(IsCi)">
-    <Exec Command="git config core.hooksPath $(HooksPath)" ConsoleToMsBuild="true"/>
+    <Exec Command="dotnet format --dry-run -v q"
+          WorkingDirectory="$(GitRoot)"
+          ConsoleToMsBuild="true"
+          StandardErrorImportance="Low"
+          ContinueOnError="true"
+          Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'">
+      <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
+    </Exec>
+
+
+    <Exec Command="git config core.hooksPath $(HooksPath)" ConsoleToMsBuild="true" Condition="'$(MSBuildLastExitCode)' == '0'"/>
 
     <MakeDir Directories="$(HooksFolder)" Condition="!Exists($(HooksFolder))" />
     <WriteLinesToFile
         File="$(PrecommitFile)"
         Lines="$(PreCommitContent)"
         Condition="!Exists($(PrecommitFile))" />
-    
+
     <!-- Create the file if it doesn't exists -->
     <WriteLinesToFile
         File="$(GitHookStatusFile)"
         Condition="!Exists($(GitHookStatusFile))" />
   </Target>
-
 </Project>

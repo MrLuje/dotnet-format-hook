@@ -1,16 +1,17 @@
-if ((Test-Path "..\out")) {
-    Remove-Item -Path "..\out" -Force -Recurse
-    if($? -eq $false) {
+$out = (Join-Path ".." "out")
+if ((Test-Path $out)) {
+    Remove-Item -Path $out -Force -Recurse
+    if ($? -eq $false) {
         Write-Error "Can't clear ./out folder"
         Return
     }
 }
 
-New-Item "..\out" -ItemType Directory > $null
-Remove-Item -Path "$env:USERPROFILE\.nuget\packages\format-hook" -Recurse -ErrorAction SilentlyContinue
+New-Item $out -ItemType Directory > $null
+Remove-Item -Path [IO.Path]::Combine("$env:USERPROFILE", ".nuget", "packages", "format-hook") -Recurse -ErrorAction SilentlyContinue
 
-dotnet pack "..\src\format-hook" -o "..\out"
-$pkgs = Get-ChildItem "..\out" -Filter "*.nupkg" -Recurse
+dotnet pack [IO.Path]::Combine("..", "src", "format-hook") -o $out
+$pkgs = Get-ChildItem $out -Filter "*.nupkg" -Recurse
 
 if ($pkgs.Length -eq 0) {
     Write-Error "Can't find nupkg file under 'out\'"
@@ -22,9 +23,9 @@ $pkgFolder = $pkgs[0].Directory.FullName
 $currentPath = Get-Location
 Write-Host "Using package $pkg"
 
-Copy-Item -Path "..\tests" -Destination "..\out" -Recurse
+Copy-Item -Path (Join-Path ".." "tests") -Destination "..\out" -Recurse
 
-Get-ChildItem "..\out\tests" |
+Get-ChildItem [IO.Path]::Combine("..", "out", "tests") |
 ForEach-Object {
     $testName = $_.Name
     $testFullpath = $_.FullName
@@ -36,11 +37,17 @@ ForEach-Object {
     Set-Location -Path $currentPath
 
     switch ($success) {
-        {$_ -eq $true} { Write-Host -ForegroundColor "GREEN" " OK"; break }
-        {$_ -eq $false} { Write-Error "Test '$testName' failed"; break }
+        { $_ -eq $true } { 
+            Write-Host -ForegroundColor "GREEN" " OK"; break 
+            exit 0;
+        }
+        { $_ -eq $false } { 
+            Write-Error "Test '$testName' failed"; break 
+        }
         Default { 
             Write-Error "Test '$testName' failed"
             Write-Host $success
         }
     }
+    exit 1;
 }

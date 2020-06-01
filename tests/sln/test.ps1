@@ -11,13 +11,13 @@ param(
 )
 $main = {
     try {
-        "       " + (Get-Content "$testName\Class1.cs" -Raw) | Set-Content "$testName\Class1.cs"
+        "       " + (Get-Content (Join-Path "$testName" "Class1.cs") -Raw) | Set-Content (Join-Path "$testName" "Class1.cs")
         
         git init -q
         git config user.email "a@a.com"
         git config user.name "hey"
         
-        dotnet add "$testName\$testname.csproj" package $pkg -s $pkgSrc > $null
+        dotnet add (Join-Path "$testName" "$testname.csproj") package $pkg -s $pkgSrc > $null
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to install $pkg"
             return $false
@@ -26,9 +26,8 @@ $main = {
         $r = Execute-Command "dotnet" "build" (Get-Location)
 
         if ($r.ExitCode -eq 0) {
-            if ((Test-Path ".git\format-hook.enabled") -eq $false) {
+            if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $false) {
                 Write-Error "$testName\.git\format-hook.enabled is missing"
-                # Remove-Item -Path .git -Force -Recurse
                 return $false
             }
         }

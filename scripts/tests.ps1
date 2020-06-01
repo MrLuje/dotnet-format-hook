@@ -8,9 +8,9 @@ if ((Test-Path $out)) {
 }
 
 New-Item $out -ItemType Directory > $null
-Remove-Item -Path [IO.Path]::Combine("$env:USERPROFILE", ".nuget", "packages", "format-hook") -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path ([IO.Path]::Combine("$env:USERPROFILE", ".nuget", "packages", "format-hook")) -Recurse -ErrorAction SilentlyContinue
 
-dotnet pack [IO.Path]::Combine("..", "src", "format-hook") -o $out
+dotnet pack ([IO.Path]::Combine("..", "src", "format-hook")) -o $out
 $pkgs = Get-ChildItem $out -Filter "*.nupkg" -Recurse
 
 if ($pkgs.Length -eq 0) {
@@ -25,7 +25,7 @@ Write-Host "Using package $pkg"
 
 Copy-Item -Path (Join-Path ".." "tests") -Destination "..\out" -Recurse
 
-Get-ChildItem [IO.Path]::Combine("..", "out", "tests") |
+Get-ChildItem ([IO.Path]::Combine("..", "out", "tests")) |
 ForEach-Object {
     $testName = $_.Name
     $testFullpath = $_.FullName

@@ -28,6 +28,7 @@ $main = {
         if ($r.ExitCode -eq 0) {
             if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $false) {
                 Write-Error "$testName\.git\format-hook.enabled is missing"
+                Write-Output $r.stderr
                 return $false
             }
         }

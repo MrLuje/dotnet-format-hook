@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  CI: false
+
 jobs:
   tests:
     runs-on: ubuntu-latest # [ubuntu-latest, windows-latest, macos-latest]

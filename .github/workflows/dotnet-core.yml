@@ -19,5 +19,9 @@ jobs:
     - name: Tests
       run: pwsh ./tests.ps1
       working-directory: ./scripts
+      continue-on-error: true
+      
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v2
 #     - name: Test
 #       run: dotnet test --no-restore --verbosity normal

@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <GitCmd>git</GitCmd>
+    <IsCi Condition="'$(CI)' != ''">$(CI)</IsCi>
     <IsCi Condition="'$(CI)' == ''">false</IsCi>
   </PropertyGroup>
 
@@ -10,7 +11,9 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitOutput" />
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
+
     <Exec Command="echo value is gitroot $(_GitOutput)" ConsoleToMSBuild='true' />
+
     <PropertyGroup Condition="'$(MSBuildLastExitCode)' == '0'">
       <GitRoot>$([MsBuild]::NormalizeDirectory($(_GitOutput.Trim())))</GitRoot>
     </PropertyGroup>
@@ -37,11 +40,7 @@
   </Target>
 
   <Target Name="SetupHooks" AfterTargets="EmitGitHooksCreateVariables" Condition="!Exists($(GitHookStatusFile)) And !($(IsCi))">
-    <Exec Command="dotnet format --dry-run -v q"
-          WorkingDirectory="$(GitRoot)"
-          ConsoleToMsBuild="true"
-          StandardErrorImportance="Low"
-          ContinueOnError="true">
+    <Exec Command="dotnet format --version" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" StandardErrorImportance="Low" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
 
@@ -50,36 +49,30 @@
       <DotnetFormatInstalled Condition="'$(MSBuildLastExitCode)' != '0'">false</DotnetFormatInstalled>
     </PropertyGroup>
 
-    <Exec Command="dotnet new tool-manifest"
-          WorkingDirectory="$(GitRoot)"
-          ConsoleToMsBuild="true"
-          Condition="!$(DotnetFormatInstalled)">
+    <Exec Command="dotnet new tool-manifest" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled)">
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
-    <Exec Command="dotnet tool install dotnet-format" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'"  />
+    <Exec Command="dotnet tool install dotnet-format" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'" />
     <Error Condition="'$(MSBuildLastExitCode)' != '0'" Text="dotnet-format is not installed and can't be installed" />
 
-    <Exec Command="dotnet format --dry-run -v q"
-          WorkingDirectory="$(GitRoot)"
-          ConsoleToMsBuild="true"
-          StandardErrorImportance="Low"
-          ContinueOnError="true"
-          Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'">
+    <Exec Command="dotnet format --version" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" StandardErrorImportance="Low" ContinueOnError="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'">
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
 
-
-    <Exec Command="git config core.hooksPath $(HooksPath)" ConsoleToMsBuild="true" Condition="'$(MSBuildLastExitCode)' == '0'"/>
+    <Exec Command="git config core.hooksPath $(HooksPath)" ConsoleToMsBuild="true" Condition="'$(MSBuildLastExitCode)' == '0'">
+      <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
+    </Exec>
+    <Error Condition="'$(MSBuildLastExitCode)' != '0'" Text="Hooks configuration with git failed" />
 
     <MakeDir Directories="$(HooksFolder)" Condition="!Exists($(HooksFolder))" />
-    <WriteLinesToFile
-        File="$(PrecommitFile)"
-        Lines="$(PreCommitContent)"
-        Condition="!Exists($(PrecommitFile))" />
+    <WriteLinesToFile File="$(PrecommitFile)" Lines="$(PreCommitContent)" />
+    <!-- <WriteLinesToFile File="$(PrecommitFile)" Lines="$(PreCommitContentUnix)" Condition="!Exists($(PrecommitFile)) AND '$(OS)' != 'Windows_NT'" /> -->
+    <Exec Command="
+        chmod +x $(PrecommitFile)
+        sed -i 's/\r$//' $(PrecommitFile)"
+      ConsoleToMsBuild="true" Condition="Exists($(PrecommitFile)) AND '$(OS)' != 'Windows_NT'" />
 
     <!-- Create the file if it doesn't exists -->
-    <WriteLinesToFile
-        File="$(GitHookStatusFile)"
-        Condition="!Exists($(GitHookStatusFile))" />
+    <WriteLinesToFile File="$(GitHookStatusFile)" Condition="!Exists($(GitHookStatusFile))" />
   </Target>
 </Project>

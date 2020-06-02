@@ -5,25 +5,28 @@
     <PreCommitContent>
       <![CDATA[#!/bin/sh
 
-echo "running precommit hook"
+echo "running win precommit hook"
 LC_ALL=C
 
 # Select files to format
 GITFILES=%24(git diff --cached --name-only --diff-filter=ACM "*.cs") 
-DOTNETFORMATFILES=%24(git diff --cached --name-only --diff-filter=ACM "*.cs") # remove root src dir from git file path when passing to dotnet format
 
 [ -z "$GITFILES" ] && exit 0
 
 # Format all selected files
-echo "$DOTNETFORMATFILES" | paste -sd , | xargs -i --verbose dotnet format --check -v d --include {} || 
+# echo "$GITFILES" | xargs --verbose dotnet format --check -v d --files || 
+if [ %24(echo "$GITFILES" | xargs dotnet format --include | grep "Formatted code" | wc -l) -gt 0 ] 
+then
 {
+  # echo "$GITFILES" | xargs dotnet format --include
 	# Add back the modified files to staging
 	echo "$GITFILES" | xargs git add
-	cat <<\EOF
-Error: Code has been reformatted and changes were staged
+	cat <<-EOF
+    Error: Code has been reformatted and changes were staged
 EOF
 	exit 2
-}]]>
+}
+fi]]>
     </PreCommitContent>
   </PropertyGroup>
 </Project>

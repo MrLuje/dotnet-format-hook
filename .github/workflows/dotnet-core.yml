@@ -26,4 +26,3 @@ jobs:
     - name: Tests
       run: pwsh ./tests.ps1
       working-directory: ./scripts
-      continue-on-error: true

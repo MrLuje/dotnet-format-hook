@@ -69,7 +69,7 @@
     <!-- <WriteLinesToFile File="$(PrecommitFile)" Lines="$(PreCommitContentUnix)" Condition="!Exists($(PrecommitFile)) AND '$(OS)' != 'Windows_NT'" /> -->
     <Exec Command="
         chmod +x $(PrecommitFile)
-        sed -i 's/\r$//' $(PrecommitFile)"
+        sed -i='' 's/\r$//' $(PrecommitFile)"
       ConsoleToMsBuild="true" Condition="Exists($(PrecommitFile)) AND '$(OS)' != 'Windows_NT'" />
 
     <!-- Create the file if it doesn't exists -->

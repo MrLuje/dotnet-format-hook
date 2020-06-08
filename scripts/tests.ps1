@@ -1,3 +1,5 @@
+Import-Module ..\tests\Test-FormatHook -Force
+
 $out = (Join-Path ".." "out")
 if ((Test-Path $out)) {
     Remove-Item -Path $out -Force -Recurse
@@ -35,26 +37,30 @@ ForEach-Object {
     $testFullpath = $_.FullName
 
     Set-Location -Path $testFullpath
+    $testFile = (Join-Path -Path $testFullpath -ChildPath "test.ps1")
+    if((Test-Path $testFile) -eq $false) {
+        continue;
+    }
 
     Write-Host "** Testing '$testName' " -NoNewline
-    $result = Invoke-Command { & (Join-Path -Path $testFullpath -ChildPath "test.ps1") -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName }
+    $result = Invoke-Command { & $testFile -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName } -ErrorAction Continue
     Set-Location -Path $currentPath
 
     $success = if ($result.Length -gt 1) { $result | Select-Object -Last 1 } else { $result }
     switch ($success) {
         { $_ -eq $true } { 
             Write-Host -ForegroundColor "GREEN" " OK";
-            exit 0;
+            break;
         }
         { $_ -eq $false } { 
-            Write-Host $result;
+            $result | ForEach-Object { Write-Host $_ }
             Write-Error "Test '$testName' failed"; 
             break;
         }
         Default { 
-            Write-Host $result;
+            $result | ForEach-Object { Write-Host $_ }
             Write-Error "Test '$testName' failed";
         }
     }
-    exit 1;
 }
+exit 1;

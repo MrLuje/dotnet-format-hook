@@ -5,7 +5,7 @@
     <PreCommitContent>
       <![CDATA[#!/bin/sh
 
-echo "running win precommit hook"
+echo "running precommit hook"
 LC_ALL=C
 
 # Select files to format

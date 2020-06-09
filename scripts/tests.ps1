@@ -43,7 +43,10 @@ ForEach-Object {
     }
 
     Write-Host "** Testing '$testName' " -NoNewline
-    $result = Invoke-Command { & $testFile -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName } -ErrorAction Continue
+    $result = Invoke-Command { 
+        $env:CI="false"
+        & $testFile -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName 
+    } -ErrorAction Continue
     Set-Location -Path $currentPath
 
     $success = if ($result.Length -gt 1) { $result | Select-Object -Last 1 } else { $result }

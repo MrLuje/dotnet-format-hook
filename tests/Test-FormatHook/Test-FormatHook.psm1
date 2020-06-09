@@ -84,6 +84,22 @@ function BuildSolution ($pathToFolder = (Get-Location)) {
     return Start-Command "dotnet" "build /flp:v=diag" $pathToFolder 
 }
 
+function AssertHookNotInstalled ($buildResult) {
+    if ($buildResult.ExitCode -eq 0) {
+        if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $true) {
+            Write-Error ".git\format-hook.enabled is present but it should not"
+            Write-Error $buildResult.stdout
+            return $false
+        }
+    }
+    else {
+        Write-Error "dotnet build failed"
+        Write-Error $buildResult.stdout
+        return $false
+    }    
+    return $true
+}
+
 function AssertHookInstalled ($buildResult) {
     if ($buildResult.ExitCode -eq 0) {
         if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $false) {
@@ -132,11 +148,45 @@ function Assert-HookTriggered($commitResult) {
     }
 }
 
+function Assert-HookNotTriggered($commitResult) {    
+    if ($commitresult.ExitCode -eq 0) {
+        return $true
+    }
+    elseif ($commitresult.ExitCode -eq 2) {
+        # files formatted
+        Write-Error "Git commit wasn't prevented by hook :("
+        Write-Information "Re-running hooks in debug"
+        # bash -x "hooks/pre-commit"
+        return $false
+    }
+    else {
+        if ($commitresult.stderr.Contains("Code has been reformatted and changes were staged")) {
+            Write-Error "Git commit wasn't prevented by hook :("
+            Write-Information "Re-running hooks in debug"
+            # bash -x "hooks/pre-commit"
+            return $false
+        }
+        Write-Error "Error $($commitresult.ExitCode)"
+        Write-Error $commitresult.stderr
+        return $false
+    }
+}
+
+function Assert-DotnetToolLocallyInstalled($package){
+    $pathToConfig = (Join-Path ".config" "dotnet-tools.json")
+    if (Test-Path $pathToConfig) {
+        return ((Get-Content $pathToConfig) | Select-String $package).Length -gt 0
+    }
+    return $false
+}
+
 function Assert-SameFileContent($files, $beforeExtension = "beforehook") {
     $allMatches = $files | ForEach-Object { 
         $orig = "$_.$beforeExtension"
         $current = $_
-        if((Get-FileHash $orig) -eq (Get-FileHash $current)) {
+        $origHash = (Get-FileHash $orig -Algorithm MD5 | Select-Object Hash).Hash
+        $currentHash = (Get-FileHash $current -Algorithm MD5 | Select-Object Hash).Hash
+        if ($origHash -eq $currentHash) {
             Write-Error "$current has not been reformatted"
             return $false
         }
@@ -144,4 +194,31 @@ function Assert-SameFileContent($files, $beforeExtension = "beforehook") {
     }
 
     return $allMatches
+}
+
+function Assert-DifferentFileContent($files, $beforeExtension = "beforehook") {
+    $allMatches = $files | ForEach-Object { 
+        $orig = "$_.$beforeExtension"
+        $current = $_
+        $origHash = (Get-FileHash $orig -Algorithm MD5 | Select-Object Hash).Hash
+        $currentHash = (Get-FileHash $current -Algorithm MD5 | Select-Object Hash).Hash
+        if ($origHash -ne $currentHash) {
+            Write-Error "$current has been reformatted"
+            return $false
+        }
+        return $true
+    }
+
+    return $allMatches
+}
+
+function Install-DotnetTool($package, $version = "") {
+    $arguments = "tool install $package --global "
+    if($version -ne "") {
+        $arguments += "--version $version"
+    }
+
+    $r = Start-Command "dotnet" $arguments
+    $env:PATH += ":/github/home/.dotnet/tools"
+    return $r
 }

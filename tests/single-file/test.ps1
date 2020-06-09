@@ -31,7 +31,7 @@ $main = {
         $r = Start-CommitProcess
 
         $hookTriggered = Assert-HookTriggered($r)
-        $allMatches = Assert-SameFileContent (@(Join-Path "$testName" "Class1.cs"))
+        $allMatches = Assert-DifferentFileContent (@(Join-Path "$testName" "Class1.cs"))
 
         return @($allMatches | Where-Object { $_ -eq $false }).Length -eq 0 -and $hookTriggered;
     }

@@ -12,7 +12,8 @@ param(
 
 $main = {
     try {
-        @("Class1.cs", "Class2.cs") | ForEach-Object { Set-FileModification (Join-Path "$testName" $_) }
+        $files = @("Class1.cs", "Class2.cs")
+        $files | ForEach-Object { Set-FileModification (Join-Path "$testName" $_) }
         
         $r = SetGitRepo;
         if ((AssertGitInstalled) -eq $false) {
@@ -31,7 +32,7 @@ $main = {
         $r = Start-CommitProcess
 
         $hookTriggered = Assert-HookTriggered($r)
-        $allMatches = Assert-SameFileContent (@("Class1.cs", "Class2.cs") | ForEach-Object { (Join-Path "$testName" $_) })
+        $allMatches = Assert-DifferentFileContent ($files | ForEach-Object { (Join-Path "$testName" $_) })
 
         return @($allMatches | Where-Object { $_ -eq $false }).Length -eq 0 -and $hookTriggered;
 

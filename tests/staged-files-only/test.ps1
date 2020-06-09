@@ -12,9 +12,8 @@ param(
 
 $main = {
     try {
-        $env:CI="true";
-
-        Set-FileModification (Join-Path "$testName" "Class1.cs")
+        $files = @("Class1.cs", "Class2.cs") 
+        $files | ForEach-Object { Set-FileModification (Join-Path "$testName" $_) }
         
         $r = SetGitRepo;
         if ((AssertGitInstalled) -eq $false) {
@@ -26,16 +25,23 @@ $main = {
         }
 
         $r = BuildSolution
-        if ((AssertHookNotInstalled $r) -eq $false) {
+        if ((AssertHookInstalled $r) -eq $false) {
             return $false
         }
 
-        $r = Start-CommitProcess
+        # only stage Class1.cs
+        git add (Join-Path "$testName" "Class1.cs") 
+        $r = Start-CommitProcess -gitAddAll $false
 
-        $hookNotTriggered = Assert-HookNotTriggered($r)
-        $allMatches = Assert-SameFileContent (@(Join-Path "$testName" "Class1.cs"))
+        $hookTriggered = Assert-HookTriggered($r)
 
-        return @($allMatches | Where-Object { $_ -eq $false }).Length -eq 0 -and $hookNotTriggered;
+        $allMatchesSame = Assert-SameFileContent ((Join-Path "$testName" "Class2.cs"))
+        $allMatchesDifferent = Assert-DifferentFileContent ((Join-Path "$testName" "Class1.cs"))
+
+        return @($allMatchesSame | Where-Object { $_ -eq $true }).Length -eq 1
+        -and @($allMatchesDifferent | Where-Object { $_ -eq $true }).Length -eq 1 
+        -and $hookTriggered;
+
     }
     catch {
         $ErrorMessage = $_.Exception.Message

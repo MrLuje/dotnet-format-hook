@@ -121,8 +121,10 @@ function Set-FileModification($filePath) {
     Copy-Item $filePath -Destination "$filePath.beforehook"
 }
 
-function Start-CommitProcess() {
-    git add .
+function Start-CommitProcess($gitAddAll = $true) {
+    if ($gitAddAll -eq $true) {
+        git add .
+    }
     $r = Start-Command "git" "commit -m format"
     return $r
 }
@@ -186,8 +188,8 @@ function Assert-SameFileContent($files, $beforeExtension = "beforehook") {
         $current = $_
         $origHash = (Get-FileHash $orig -Algorithm MD5 | Select-Object Hash).Hash
         $currentHash = (Get-FileHash $current -Algorithm MD5 | Select-Object Hash).Hash
-        if ($origHash -eq $currentHash) {
-            Write-Error "$current has not been reformatted"
+        if ($origHash -ne $currentHash) {
+            Write-Error "$current has been reformatted"
             return $false
         }
         return $true
@@ -202,8 +204,8 @@ function Assert-DifferentFileContent($files, $beforeExtension = "beforehook") {
         $current = $_
         $origHash = (Get-FileHash $orig -Algorithm MD5 | Select-Object Hash).Hash
         $currentHash = (Get-FileHash $current -Algorithm MD5 | Select-Object Hash).Hash
-        if ($origHash -ne $currentHash) {
-            Write-Error "$current has been reformatted"
+        if ($origHash -eq $currentHash) {
+            Write-Error "$current has not been reformatted"
             return $false
         }
         return $true

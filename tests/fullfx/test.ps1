@@ -1,4 +1,6 @@
-# Parameter help description
+<# 
+.Description Ensure Format-Hook behave correctly on full .net framework
+#>
 param(
     [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
     [string] $pkg,
@@ -12,6 +14,11 @@ param(
 
 $main = {
     try {
+        if ($IsWindows -eq $false) {
+            Write-Host "Skipping test (Windows only)" -NoNewline -ForegroundColor Yellow
+            return $true
+        }
+
         Set-FileModification (Join-Path "$testName" "Class1.cs")
         
         $r = SetGitRepo;

@@ -9,6 +9,7 @@ on:
 env:
   CI: false
   VERBOSE: true
+  IN_DOCKER: true
 
 jobs:
   tests:

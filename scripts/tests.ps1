@@ -38,13 +38,13 @@ ForEach-Object {
 
     Set-Location -Path $testFullpath
     $testFile = (Join-Path -Path $testFullpath -ChildPath "test.ps1")
-    if((Test-Path $testFile) -eq $false) {
+    if ((Test-Path $testFile) -eq $false) {
         continue;
     }
 
     Write-Host "** Testing '$testName' " -NoNewline
     $result = Invoke-Command { 
-        $env:CI="false"
+        $env:CI = "false"
         & $testFile -pkg "format-hook" -pkgSrc $pkgFolder -testName $testName 
     } -ErrorAction Continue
     Set-Location -Path $currentPath

@@ -13,7 +13,7 @@ param(
 $main = {
     try {
         if(-not(Test-Path env:IN_DOCKER)) {
-            Write-Host "Skipping test" -NoNewline -ForegroundColor Yellow
+            Write-Host "Skipping test (container only)" -NoNewline -ForegroundColor Yellow
             return $true
         }
 

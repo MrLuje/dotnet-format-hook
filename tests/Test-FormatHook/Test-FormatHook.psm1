@@ -25,6 +25,7 @@ Function Start-Command ($commandPath, $commandArguments, $path = (Get-Location))
         $p | Add-Member "stderr" $stderr
     }
     Catch {
+        Write-Error $_
     }
 
     if ($env:VERBOSE -eq "true") {

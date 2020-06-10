@@ -30,6 +30,7 @@ $currentPath = Get-Location
 Write-Host "Using package $($pkgs[0].FullName)"
 
 Copy-Item -Path (Join-Path ".." "tests") -Destination "..\out" -Recurse
+$testResults = $true
 
 Get-ChildItem ([IO.Path]::Combine("..", "out", "tests")) -Directory |
 ForEach-Object {
@@ -39,7 +40,7 @@ ForEach-Object {
     Set-Location -Path $testFullpath
     $testFile = (Join-Path -Path $testFullpath -ChildPath "test.ps1")
     if ((Test-Path $testFile) -eq $false) {
-        continue;
+        return;
     }
 
     Write-Host "** Testing '$testName' " -NoNewline
@@ -57,13 +58,19 @@ ForEach-Object {
         }
         { $_ -eq $false } { 
             $result | ForEach-Object { Write-Host $_ }
+            $testResults = $false
             Write-Error "Test '$testName' failed"; 
             break;
         }
         Default { 
             $result | ForEach-Object { Write-Host $_ }
+            $testResults = $false
             Write-Error "Test '$testName' failed";
         }
     }
+}
+
+if ($testResults -eq $true) {
+    exit 0;
 }
 exit 1;

@@ -27,10 +27,20 @@ jobs:
     - name: Tests
       run: pwsh ./tests.ps1
       working-directory: ./scripts
+    - name: Upload nupkg
+      uses: actions/upload-artifact@v1
+      with:
+        name: pkgs
+        path: out/
 
   deploy:
     needs: tests
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Push package to nuget.org
-        run: dotnet nuget push ./out/*.nupkg -k ${{ secrets.NUGET_DEPLOY_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+    - name: Download nupkg
+      uses: actions/download-artifact@v1
+      with:
+        name: pkgs
+    - name: Push package to nuget.org
+      run: dotnet nuget push pkgs/*.nupkg -k ${{ secrets.NUGET_DEPLOY_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate

@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <HooksPath>hooks</HooksPath>
+    <DotnetFormatVersion>4.0.130203</DotnetFormatVersion>
     <PreCommitContent>
       <![CDATA[#!/bin/sh
 

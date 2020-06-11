@@ -52,7 +52,7 @@
     <Exec Command="dotnet new tool-manifest" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled)">
       <Output TaskParameter="ExitCode" PropertyName="MSBuildLastExitCode" />
     </Exec>
-    <Exec Command="dotnet tool install dotnet-format" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'" />
+    <Exec Command="dotnet tool install dotnet-format --version $(DotnetFormatVersion)" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'" />
     <Error Condition="'$(MSBuildLastExitCode)' != '0'" Text="dotnet-format is not installed and can't be installed" />
 
     <Exec Command="dotnet format --version" WorkingDirectory="$(GitRoot)" ConsoleToMsBuild="true" StandardErrorImportance="Low" ContinueOnError="true" Condition="!$(DotnetFormatInstalled) AND '$(MSBuildLastExitCode)' == '0'">

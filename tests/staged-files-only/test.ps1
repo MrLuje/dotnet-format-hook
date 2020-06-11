@@ -16,16 +16,16 @@ $main = {
         $files | ForEach-Object { Set-FileModification (Join-Path "$testName" $_) }
         
         $r = SetGitRepo;
-        if ((AssertGitInstalled) -eq $false) {
+        if ((Assert-GitInstalled) -eq $false) {
             return $false
         }
         
-        if ((InstallNugetPackage (Join-Path "$testName" "$testname.csproj") $pkg $pkgSrc) -eq $false) {
+        if ((Install-NugetPackage (Join-Path "$testName" "$testname.csproj") $pkg $pkgSrc) -eq $false) {
             return $false
         }
 
-        $r = BuildSolution
-        if ((AssertHookInstalled $r) -eq $false) {
+        $r = Build-Solution
+        if ((Assert-HookInstalled $r) -eq $false) {
             return $false
         }
 
@@ -33,7 +33,7 @@ $main = {
         git add (Join-Path "$testName" "Class1.cs") 
         $r = Start-CommitProcess -gitAddAll $false
 
-        $hookTriggered = Assert-HookTriggered($r)
+        $hookTriggered = Assert-HookHasFormatted($r)
 
         $allMatchesSame = Assert-SameFileContent ((Join-Path "$testName" "Class2.cs"))
         $allMatchesDifferent = Assert-DifferentFileContent ((Join-Path "$testName" "Class1.cs"))

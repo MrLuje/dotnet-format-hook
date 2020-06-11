@@ -60,7 +60,7 @@ function SetGitRepo () {
     return $null
 }
 
-function AssertGitInstalled() {
+function Assert-GitInstalled() {
     if ((Test-Path ".git") -eq $false) {
         Write-Error "Git repo in test wasn't initialized"
         return $false
@@ -68,7 +68,7 @@ function AssertGitInstalled() {
     return $true
 }
 
-function InstallNugetPackage ($pathToCsProj, $pkg, $pkgSrc) {  
+function Install-NugetPackage ($pathToCsProj, $pkg, $pkgSrc) {  
     $r = Start-Command "dotnet" "add $pathToCsProj package $pkg -s $pkgSrc"
     if ($r.ExitCode -ne 0) {
         Write-Error "Failed to install $pkg"
@@ -77,7 +77,7 @@ function InstallNugetPackage ($pathToCsProj, $pkg, $pkgSrc) {
     return $true    
 }
 
-function BuildSolution ($pathToFolder = (Get-Location)) {
+function Build-Solution ($pathToFolder = (Get-Location)) {
     if ($env:VERBOSE -eq "true") {
         Write-Host "Executing dotnet build"
     }
@@ -85,7 +85,7 @@ function BuildSolution ($pathToFolder = (Get-Location)) {
     return Start-Command "dotnet" "build /flp:v=diag" $pathToFolder 
 }
 
-function AssertHookNotInstalled ($buildResult) {
+function Assert-HookNotInstalled ($buildResult) {
     if ($buildResult.ExitCode -eq 0) {
         if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $true) {
             Write-Error ".git\format-hook.enabled is present but it should not"
@@ -101,7 +101,7 @@ function AssertHookNotInstalled ($buildResult) {
     return $true
 }
 
-function AssertHookInstalled ($buildResult) {
+function Assert-HookInstalled ($buildResult) {
     if ($buildResult.ExitCode -eq 0) {
         if ((Test-Path (Join-Path ".git" "format-hook.enabled")) -eq $false) {
             Write-Error ".git\format-hook.enabled is missing"
@@ -117,9 +117,13 @@ function AssertHookInstalled ($buildResult) {
     return $true
 }
 
+function New-FileBackup($filePath) {
+    Copy-Item $filePath -Destination "$filePath.beforehook"
+}
+
 function Set-FileModification($filePath) {
     "       " + (Get-Content $filePath -Raw) | Set-Content $filePath
-    Copy-Item $filePath -Destination "$filePath.beforehook"
+    New-FileBackup $filePath
 }
 
 function Start-CommitProcess($gitAddAll = $true) {
@@ -130,7 +134,7 @@ function Start-CommitProcess($gitAddAll = $true) {
     return $r
 }
 
-function Assert-HookTriggered($commitResult) {    
+function Assert-HookHasFormatted($commitResult) {    
     if ($commitresult.ExitCode -eq 0) {
         Write-Error "Git commit wasn't prevented by hook :("
         Write-Information "Re-running hooks in debug"
@@ -151,7 +155,7 @@ function Assert-HookTriggered($commitResult) {
     }
 }
 
-function Assert-HookNotTriggered($commitResult) {    
+function Assert-HookHasNotFormatted($commitResult) {    
     if ($commitresult.ExitCode -eq 0) {
         return $true
     }
@@ -175,7 +179,7 @@ function Assert-HookNotTriggered($commitResult) {
     }
 }
 
-function Assert-DotnetToolLocallyInstalled($package){
+function Assert-DotnetToolLocallyInstalled($package) {
     $pathToConfig = (Join-Path ".config" "dotnet-tools.json")
     if (Test-Path $pathToConfig) {
         return ((Get-Content $pathToConfig) | Select-String $package).Length -gt 0
@@ -217,7 +221,7 @@ function Assert-DifferentFileContent($files, $beforeExtension = "beforehook") {
 
 function Install-DotnetTool($package, $version = "") {
     $arguments = "tool install $package --global "
-    if($version -ne "") {
+    if ($version -ne "") {
         $arguments += "--version $version"
     }
 

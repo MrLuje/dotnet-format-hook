@@ -22,22 +22,22 @@ $main = {
         Set-FileModification (Join-Path "$testName" "Class1.cs")
         
         $r = SetGitRepo;
-        if ((AssertGitInstalled) -eq $false) {
+        if ((Assert-GitInstalled) -eq $false) {
             return $false
         }
         
-        if ((InstallNugetPackage (Join-Path "$testName" "$testname.csproj") $pkg $pkgSrc) -eq $false) {
+        if ((Install-NugetPackage (Join-Path "$testName" "$testname.csproj") $pkg $pkgSrc) -eq $false) {
             return $false
         }
 
-        $r = BuildSolution
-        if ((AssertHookInstalled $r) -eq $false) {
+        $r = Build-Solution
+        if ((Assert-HookInstalled $r) -eq $false) {
             return $false
         }
 
         $r = Start-CommitProcess
 
-        $hookTriggered = Assert-HookTriggered($r)
+        $hookTriggered = Assert-HookHasFormatted($r)
         $allMatches = Assert-DifferentFileContent (@(Join-Path "$testName" "Class1.cs"))
 
         return @($allMatches | Where-Object { $_ -eq $false }).Length -eq 0 -and $hookTriggered;

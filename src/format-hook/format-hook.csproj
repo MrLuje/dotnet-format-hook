@@ -8,7 +8,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
 
     <PackageId>format-hook</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>MrLuje</Authors>
     <Description>dotnet-format as a git pre-commit hook for your projects through nuget
 This nuget will locally install dotnet-format in your git repository and setup a git pre-commit hook

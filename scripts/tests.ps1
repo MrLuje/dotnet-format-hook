@@ -1,4 +1,4 @@
-Import-Module ..\tests\Test-FormatHook -Force
+Import-Module .\Test-FormatHook -Force
 
 $out = (Join-Path ".." "out")
 if ((Test-Path $out)) {

@@ -12,8 +12,9 @@ env:
 
 jobs:
   tests:
-    if: ${{ secrets.NUGET_DEPLOY_KEY }} !== ""
     runs-on: ${{ matrix.runner }}
+    env:
+      deployKey: ${{ secrets.NUGET_DEPLOY_KEY }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,9 +28,11 @@ jobs:
         dotnet-version: 3.1.101
     - name: Tests
       run: pwsh ./tests.ps1
+      if: ${{ env.deployKey }} !== ""
       working-directory: ./scripts
     - name: Upload nupkg
       uses: actions/upload-artifact@v1
+      if: ${{ env.deployKey }} !== ""
       with:
         name: pkgs
         path: out/
@@ -37,12 +40,15 @@ jobs:
   deploy:
     needs: tests
     runs-on: ubuntu-latest
-    if: ${{ secrets.NUGET_DEPLOY_KEY }} !== ""
+    env:
+      deployKey: ${{ secrets.NUGET_DEPLOY_KEY }}
     
     steps:
     - name: Download nupkg
+      if: ${{ env.deployKey }} !== ""
       uses: actions/download-artifact@v1
       with:
         name: pkgs
     - name: Push package to nuget.org
+      if: ${{ env.deployKey }} !== ""
       run: dotnet nuget push pkgs/*.nupkg -k ${{ secrets.NUGET_DEPLOY_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate

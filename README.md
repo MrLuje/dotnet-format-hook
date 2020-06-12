@@ -31,14 +31,24 @@ Under the hood, this will :
 - configures git to use the newly created [*hooks*](#HooksPath) folder at the root of your repository
 - adds the *pre-commit* hook that handles dotnet-format
 
+Your git repository will looks like :
+```
+- .git
+- hooks/
+  - pre-commit
+...
+... rest of your repository
+```
+
 ## Configuration
 
 You can configure the following properties by adding them on the csproj you installed format-hook :
 
-| Property  | Description                                                                           | Default Value |
-| --------- | ------------------------------------------------------------------------------------- | ------------- |
-| CI        | Prevent hook from being installed if true. Major CI systems set it to true by default | false         |
-| HooksPath | Folder to which hooks are configured                                                  | hooks         |
+| Property            | Description                                                                           | Default Value |
+| ------------------- | ------------------------------------------------------------------------------------- | ------------- |
+| CI                  | Prevent hook from being installed if true. Major CI systems set it to true by default | false         |
+| HooksPath           | Folder to which hooks are configured                                                  | hooks         |
+| DotnetFormatVersion | dotnet-format version to install if missing                                           | 4.0.130203    |
 
 ### Example
 
@@ -55,3 +65,9 @@ You can configure the following properties by adding them on the csproj you inst
 
 - .Net Standard / .NET Core
 - Full Framework .NET
+
+## Acknowledgments
+
+<https://commons.wikimedia.org/wiki/File:Breathe-format-indent-more.svg>
+
+<https://github.com/Nagarian/dotnethooks>

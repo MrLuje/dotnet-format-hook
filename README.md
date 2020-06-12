@@ -32,13 +32,21 @@ Under the hood, this will :
 - adds the *pre-commit* hook that handles dotnet-format
 
 Your git repository will looks like :
-```
+
+```shell
 - .git
 - hooks/
   - pre-commit
 ...
 ... rest of your repository
 ```
+
+## How to uninstall
+
+- remove format-hook nuget
+- delete .git/format-hook.enabled file
+- delete hooks folder
+- edit .git/config and remove the line : hooksPath = hooks
 
 ## Configuration
 
@@ -65,6 +73,19 @@ You can configure the following properties by adding them on the csproj you inst
 
 - .Net Standard / .NET Core
 - Full Framework .NET
+
+## Tests
+
+### With powershell
+
+Run ./scripts/tests.ps1
+
+### With [act](https://github.com/nektos/act)
+
+```shell
+docker build . -t act-dotnetformathook
+act -P ubuntu-latest=act-dotnetformathook
+```
 
 ## Acknowledgments
 
